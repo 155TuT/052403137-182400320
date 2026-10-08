@@ -1,0 +1,146 @@
+import { CURRENT_USER, SCHEMA_VERSION } from './model.js';
+
+const today = new Date();
+const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+const stamp = `${day}T09:00:00+08:00`;
+const yesterday = new Date(today);
+yesterday.setDate(yesterday.getDate() - 1);
+const yesterdayDay = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+export const seedItems = [
+  {
+    id: 'umbrella',
+    type: 'found',
+    name: '浅蓝折叠伞',
+    category: '雨伞',
+    campus: '旗山校区',
+    area: '图书馆东侧',
+    eventDate: '2026-09-26',
+    description: '浅蓝色折叠伞，伞柄有一处小记号。已交至图书馆服务点，请认领时说明未公开的细节。',
+    contact: 'umbrella@example.test',
+    ownerId: 'demo-librarian',
+    ownerName: '图书馆服务点',
+    status: 'active',
+    image: 'umbrella',
+    color: '#D9ECFC',
+    custody: '服务点已接收',
+    timeLabel: '9月26日拾得',
+    source: '本人拾得',
+    createdAt: '2026-09-26T15:20:00+08:00',
+    updatedAt: '2026-09-26T16:05:00+08:00',
+  },
+  {
+    id: 'keys',
+    type: 'found',
+    name: '银色钥匙串',
+    category: '钥匙',
+    campus: '旗山校区',
+    area: '教学区连廊',
+    eventDate: day,
+    description: '在教学区连廊捡到一串银色钥匙，暂由我保管。请说明钥匙数量和挂件的细节。',
+    contact: 'keys@example.test',
+    ownerId: CURRENT_USER.id,
+    ownerName: CURRENT_USER.name,
+    status: 'active',
+    image: 'keys',
+    color: '#FFBD73',
+    custody: '本人暂存',
+    timeLabel: '今天 09:00',
+    source: '本人拾得',
+    createdAt: stamp,
+    updatedAt: stamp,
+  },
+  {
+    id: 'bottle',
+    type: 'lost',
+    name: '黑色保温杯',
+    category: '水杯',
+    campus: '旗山校区',
+    area: '食堂附近',
+    eventDate: yesterdayDay,
+    description: '黑色保温杯可能落在食堂二层，杯身有使用痕迹。如果见到相似的杯子，欢迎提供线索。',
+    contact: 'bottle@example.test',
+    ownerId: 'demo-student',
+    ownerName: '林同学（示例）',
+    status: 'active',
+    image: 'bottle',
+    color: '#E9F4CC',
+    custody: '寻找中',
+    timeLabel: '昨天遗失',
+    source: '本人寻物',
+    createdAt: `${yesterdayDay}T13:30:00+08:00`,
+    updatedAt: `${yesterdayDay}T13:30:00+08:00`,
+  },
+];
+
+export const seedDrafts = [
+  {
+    id: 'draft-bottle',
+    type: 'found',
+    kind: 'found',
+    name: '黑色保温杯',
+    category: '水杯',
+    area: '食堂附近',
+    description: '黑色杯身，分类建议可在发布前修改。',
+    image: 'bottle',
+    color: '#E9F4CC',
+    progress: '待确认物品分类',
+  },
+  {
+    id: 'draft-keys',
+    type: 'found',
+    kind: 'found',
+    name: '银色钥匙串',
+    category: '钥匙',
+    area: '教学区连廊',
+    description: '已填写基础信息，待检查公开内容。',
+    image: 'keys',
+    color: '#FFBD73',
+    progress: '基础信息已保存',
+  },
+  {
+    id: 'draft-lost',
+    type: 'lost',
+    kind: 'lost',
+    name: '蓝色折叠伞',
+    category: '雨伞',
+    area: '图书馆附近',
+    description: '具体遗失时间暂不确定。',
+    image: 'umbrella',
+    color: '#D9ECFC',
+    progress: '寻物信息草稿',
+  },
+  {
+    id: 'draft-transfer',
+    type: 'found',
+    kind: 'transfer',
+    relation: 'transfer',
+    name: '银色钥匙转报',
+    category: '钥匙',
+    area: '教学区',
+    description: '来自公开招领消息的线索，尚未确认原持有人。',
+    image: 'keys',
+    color: '#FFBD73',
+    progress: '来源信息待确认',
+  },
+].map((draft) => ({
+  ...draft,
+  campus: '旗山校区',
+  eventDate: '',
+  contact: 'demo@example.test',
+  ownerId: CURRENT_USER.id,
+  ownerName: CURRENT_USER.name,
+  status: 'draft',
+  updatedAt: stamp,
+}));
+
+export function createInitialState() {
+  return JSON.parse(
+    JSON.stringify({
+      schemaVersion: SCHEMA_VERSION,
+      items: seedItems,
+      drafts: seedDrafts,
+      currentUser: CURRENT_USER,
+    }),
+  );
+}
