@@ -1,7 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createInitialState } from './seed.js';
-import { CAMPUSES, CURRENT_USER, loadState, saveState, completeItem } from './model.js';
-import { Icon, Glyph, Button, Hero, EmptyState } from './ui.jsx';
+import {
+  CAMPUSES,
+  CURRENT_USER,
+  loadState,
+  saveState,
+  createItem,
+  completeItem,
+  upsertDraft,
+} from './model.js';
+import { Icon, Glyph, Button, PageHeader, PageTitle, Hero, EmptyState } from './ui.jsx';
+import Editor from './Editor.jsx';
 import Detail from './Detail.jsx';
 
 const statusOf = (item) =>
@@ -108,6 +117,52 @@ function Overlay({ children, onClose, className = '', title }) {
     </div>
   );
 }
+function PublishMenu({ onClose, onChoose, onDrafts }) {
+  const relations = [
+    ['lost', '我丢东西了', '发一条寻物，让更多人帮你留意', 'search'],
+    ['found', '我捡到了', '物品在我这里，等主人来认领', 'keys'],
+    ['service', '已交服务点', '登记接收信息，等工作人员确认', 'service'],
+    ['transfer', '转报一条线索', '我没有实物，先帮助核实来源', 'publish'],
+  ];
+  return (
+    <Overlay title="选择发布关系" className="publish-overlay" onClose={onClose}>
+      <div className="publish-stack">
+        <div className="publish-base">
+          <button className="draft-shortcut" onClick={onDrafts}>
+            <Icon name="drafts" />
+            草稿箱
+          </button>
+          <button className="publish-close" aria-label="关闭发布菜单" onClick={onClose}>
+            <Glyph name="close" size={24} />
+          </button>
+        </div>
+        {relations.map(([kind, title, subtitle, icon], i) => (
+          <button
+            key={kind}
+            className={`relation relation--${kind}`}
+            style={{ top: 174 + i * 88, zIndex: 5 - i }}
+            onClick={() => onChoose(kind)}
+          >
+            <span className="relation-icon">
+              <Icon name={icon} size={52} />
+            </span>
+            <span>
+              <strong>{title}</strong>
+              <small>{subtitle}</small>
+            </span>
+            <Glyph name="right" />
+          </button>
+        ))}
+        <div className="publish-intro">
+          <p>发布一件小事</p>
+          <Icon name="publish" size={60} />
+          <h2>你和这件小物的关系是？</h2>
+          <p>先选关系，再用一分钟把信息说清楚。</p>
+        </div>
+      </div>
+    </Overlay>
+  );
+}
 function readInitial() {
   try {
     return { state: loadState(localStorage) || createInitialState(), error: '' };
@@ -158,6 +213,76 @@ export default function App() {
   function openItem(item) {
     go({ page: 'detail', id: item.id });
   }
+  function begin(kind) {
+    go({ page: 'editor', type: kind === 'lost' ? 'lost' : 'found', relation: kind });
+  }
+  function saveDraft(form) {
+    const sourceItemId = route.editId || form.sourceItemId;
+    const existingEditDraft =
+      sourceItemId &&
+      dataRef.current.drafts.find(
+        (record) => record.sourceItemId === sourceItemId && record.ownerId === CURRENT_USER.id,
+      );
+    const draftId = sourceItemId
+      ? form.id && form.id !== sourceItemId
+        ? form.id
+        : existingEditDraft?.id
+      : form.id;
+    const draft = {
+      ...form,
+      id: draftId,
+      sourceItemId,
+      ownerId: CURRENT_USER.id,
+      relation: route.relation || form.relation,
+    };
+    const drafts = upsertDraft(dataRef.current.drafts, draft);
+    commit({ ...dataRef.current, drafts });
+    setToast('草稿已保存，下次可从“我的”继续填写。');
+    return drafts.find((record) => record.id === draft.id) || drafts[0];
+  }
+  function publish(form) {
+    const sourceItemId = route.editId || form.sourceItemId;
+    const previous =
+      sourceItemId && dataRef.current.items.find((record) => record.id === sourceItemId);
+    if (
+      sourceItemId &&
+      (!previous || previous.ownerId !== CURRENT_USER.id || previous.status !== 'active')
+    )
+      throw new Error('这条记录现在不能编辑。');
+    const clean = {
+      ...form,
+      ownerName: CURRENT_USER.name,
+      relation: route.relation || form.relation,
+      timeLabel: '',
+      custody:
+        route.relation === 'transfer'
+          ? '来源待核实'
+          : route.relation === 'service'
+            ? '发布者登记已交服务点'
+            : form.type === 'found'
+              ? '本人暂存'
+              : '正在寻找',
+    };
+    delete clean.sourceItemId;
+    const item = createItem(clean, {
+      id: previous?.id,
+      items: dataRef.current.items.filter((record) => record.id !== previous?.id),
+    });
+    if (previous) item.createdAt = previous.createdAt;
+    const items = previous
+      ? dataRef.current.items.map((record) => (record.id === previous.id ? item : record))
+      : [item, ...dataRef.current.items];
+    commit({
+      ...dataRef.current,
+      items,
+      drafts: dataRef.current.drafts.filter(
+        (record) => record.id !== form.id && (!previous || record.sourceItemId !== previous.id),
+      ),
+    });
+    setToast(previous ? '修改已保存' : '发布成功，愿小物早日回家。');
+    setTrail([{ page: 'mine' }]);
+    setRoute({ page: 'detail', id: item.id });
+  }
   function complete(id) {
     commit({ ...dataRef.current, items: completeItem(dataRef.current.items, id, CURRENT_USER.id) });
     setToast('状态已更新，谢谢你让小物回家。');
@@ -206,6 +331,15 @@ export default function App() {
             <>
               <header className="mine-header">
                 <h1>我的拾伴</h1>
+                <div>
+                  <button
+                    className="round-button"
+                    aria-label="草稿箱"
+                    onClick={() => go({ page: 'drafts' })}
+                  >
+                    <Icon name="drafts" />
+                  </button>
+                </div>
               </header>
               <main className="page-scroll with-nav">
                 <Hero mine />
@@ -226,7 +360,13 @@ export default function App() {
                     </div>
                   </div>
                 </section>
-
+                <button className="todo-card" onClick={() => go({ page: 'drafts' })}>
+                  <span>
+                    <strong>现在轮到你啦</strong>
+                    <small>{`还有 ${data.drafts.length} 份草稿，想好就让小物出发。`}</small>
+                  </span>
+                  <Glyph name="right" />
+                </button>
                 <div className="section-heading">
                   <h2>我发布的</h2>
                 </div>
@@ -240,7 +380,10 @@ export default function App() {
                     />
                   ))
                 ) : (
-                  <EmptyState title="还没有发布记录" description="暂无属于当前用户的物品信息。" />
+                  <EmptyState
+                    title="还没有发布记录"
+                    description="从右下角开始，发布你的第一件小物。"
+                  />
                 )}
               </main>
             </>
@@ -265,7 +408,76 @@ export default function App() {
                   我的
                 </button>
               </div>
+              <button
+                className="publish-button"
+                aria-label="发布物品"
+                onClick={() => setModal('publish')}
+              >
+                <Icon name="publish" size={46} />
+              </button>
             </nav>
+          )}
+          {route.page === 'drafts' && (
+            <>
+              <PageHeader title="草稿箱" onBack={() => tab('mine')} />
+              <main className="page-scroll">
+                <PageTitle
+                  title="小事先存着，想好再出发"
+                  subtitle="没写完也没关系，下次接着来。"
+                  icon="drafts"
+                />
+                {data.drafts.length ? (
+                  data.drafts.map((draft) => (
+                    <RecordRow
+                      key={draft.id}
+                      item={draft}
+                      subtitle={
+                        draft.progress ||
+                        `${draft.type === 'lost' ? '寻物' : '招领'}草稿 · 尚未发布`
+                      }
+                      action="继续填写"
+                      onClick={() =>
+                        go({
+                          page: 'editor',
+                          type: draft.type,
+                          draftId: draft.id,
+                          editId: draft.sourceItemId,
+                          relation: draft.relation,
+                        })
+                      }
+                    />
+                  ))
+                ) : (
+                  <EmptyState
+                    title="草稿箱空空的"
+                    description="填写过程中保存的内容，会留在这里。"
+                  />
+                )}
+              </main>
+            </>
+          )}
+          {route.page === 'editor' && (
+            <Editor
+              key={route.draftId || route.editId || route.type}
+              type={route.type}
+              initialData={
+                data.drafts.find((draft) => draft.id === route.draftId) ||
+                data.items.find((item) => item.id === route.editId) ||
+                (route.relation === 'service' || route.relation === 'transfer'
+                  ? {
+                      type: 'found',
+                      relation: route.relation,
+                      description:
+                        route.relation === 'service'
+                          ? '已交服务点：请补充服务点名称与交接情况。'
+                          : '转报来源：请说明原信息来源，尚未确认实际持有人。',
+                    }
+                  : null)
+              }
+              onBack={back}
+              onSaveDraft={saveDraft}
+              onPublish={publish}
+            />
           )}
           {route.page === 'detail' && (
             <Detail
@@ -274,10 +486,20 @@ export default function App() {
               currentUser={CURRENT_USER}
               onBack={back}
               onComplete={complete}
+              onEdit={(item) =>
+                go({ page: 'editor', type: item.type, editId: item.id, relation: item.relation })
+              }
               onNotify={setToast}
             />
           )}
         </div>
+        {modal === 'publish' && (
+          <PublishMenu
+            onClose={() => setModal(null)}
+            onChoose={begin}
+            onDrafts={() => go({ page: 'drafts' })}
+          />
+        )}
         {modal === 'campus' && (
           <Overlay title="选择校区" onClose={() => setModal(null)} className="campus-overlay">
             <div className="campus-sheet">
