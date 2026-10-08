@@ -10,9 +10,10 @@ import {
   completeItem,
   upsertDraft,
 } from './model.js';
-import { Icon, Glyph, Button, PageHeader, PageTitle, Hero, EmptyState } from './ui.jsx';
+import { Icon, Glyph, Button, PageHeader, PageTitle, Hero, InfoCard, EmptyState } from './ui.jsx';
 import Editor from './Editor.jsx';
 import Detail from './Detail.jsx';
+import Activity from './Activity.jsx';
 import Search from './Search.jsx';
 
 const presets = [
@@ -225,6 +226,7 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState(null);
   const [filter, setFilter] = useState(0);
+  const [mineTab, setMineTab] = useState('published');
   const [toast, setToast] = useState('');
   useEffect(() => {
     if (!toast) return;
@@ -333,6 +335,17 @@ export default function App() {
     commit({ ...dataRef.current, items: completeItem(dataRef.current.items, id, CURRENT_USER.id) });
     setToast('状态已更新，谢谢你让小物回家。');
   }
+  function saveActivity(record) {
+    commit({
+      ...dataRef.current,
+      activities: [
+        { ...record, id: crypto.randomUUID?.() || String(Date.now()) },
+        ...(dataRef.current.activities || []),
+      ],
+    });
+    setToast('已保存到本机记录，请通过公开联系方式联系对方。');
+    go({ page: 'messages' }, true);
+  }
   function filtered(searchQuery = '') {
     const preset = presets[filter];
     let result = searchItems(data.items, {
@@ -352,7 +365,8 @@ export default function App() {
     return result;
   }
   const ownItems = data.items.filter((item) => item.ownerId === CURRENT_USER.id),
-    currentItem = data.items.find((item) => item.id === route.id);
+    currentItem = data.items.find((item) => item.id === route.id),
+    activities = data.activities || [];
   const home = route.page === 'home',
     mine = route.page === 'mine';
   return (
@@ -412,6 +426,20 @@ export default function App() {
                   >
                     <Icon name="drafts" />
                   </button>
+                  <button
+                    className="round-button"
+                    aria-label="帮助与说明"
+                    onClick={() => go({ page: 'help' })}
+                  >
+                    <Icon name="mascot-pocket" />
+                  </button>
+                  <button
+                    className="round-button"
+                    aria-label="消息与记录"
+                    onClick={() => go({ page: 'messages' })}
+                  >
+                    <Glyph name="message" size={32} />
+                  </button>
                 </div>
               </header>
               <main className="page-scroll with-nav">
@@ -431,6 +459,14 @@ export default function App() {
                       <b>{ownItems.length}</b>
                       <span>我发布的</span>
                     </div>
+                    <div>
+                      <b>{activities.filter((record) => record.kind === 'claim').length}</b>
+                      <span>我认领的</span>
+                    </div>
+                    <div>
+                      <b>{activities.filter((record) => record.kind === 'clue').length}</b>
+                      <span>我协助的</span>
+                    </div>
                   </div>
                 </section>
                 <button className="todo-card" onClick={() => go({ page: 'drafts' })}>
@@ -440,22 +476,51 @@ export default function App() {
                   </span>
                   <Glyph name="right" />
                 </button>
-                <div className="section-heading">
-                  <h2>我发布的</h2>
+                <div className="mine-tabs" role="tablist" aria-label="我的记录">
+                  {[
+                    ['published', '我发布的'],
+                    ['claim', '我认领的'],
+                    ['clue', '我协助的'],
+                  ].map(([value, label]) => (
+                    <button
+                      key={value}
+                      role="tab"
+                      aria-selected={mineTab === value}
+                      onClick={() => setMineTab(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
-                {ownItems.length ? (
-                  ownItems.map((item) => (
-                    <RecordRow
-                      key={item.id}
-                      item={item}
-                      subtitle={`${item.id === 'keys' ? 'XB-026' : '我的发布'} · ${statusOf(item)}`}
-                      onClick={() => openItem(item)}
+                {mineTab === 'published' ? (
+                  ownItems.length ? (
+                    ownItems.map((item) => (
+                      <RecordRow
+                        key={item.id}
+                        item={item}
+                        subtitle={`${item.id === 'keys' ? 'XB-026' : '我的发布'} · ${statusOf(item)}`}
+                        onClick={() => openItem(item)}
+                      />
+                    ))
+                  ) : (
+                    <EmptyState
+                      title="还没有发布记录"
+                      description="从右下角开始，发布你的第一件小物。"
                     />
-                  ))
+                  )
+                ) : activities.filter((record) => record.kind === mineTab).length ? (
+                  activities
+                    .filter((record) => record.kind === mineTab)
+                    .map((record) => (
+                      <InfoCard key={record.id} title={record.itemName}>
+                        <p>{record.content}</p>
+                        <p className="muted">本机记录 · 尚需自行联系对方</p>
+                      </InfoCard>
+                    ))
                 ) : (
                   <EmptyState
-                    title="还没有发布记录"
-                    description="从右下角开始，发布你的第一件小物。"
+                    title="好事，从这一次开始"
+                    description="留下的认领信息和线索会出现在这里。"
                   />
                 )}
               </main>
@@ -579,6 +644,18 @@ export default function App() {
               onEdit={(item) =>
                 go({ page: 'editor', type: item.type, editId: item.id, relation: item.relation })
               }
+              onNotify={setToast}
+              onClaim={(item) => go({ page: 'claim', id: item.id })}
+              onClue={(item) => go({ page: 'clue', id: item.id })}
+            />
+          )}
+          {['claim', 'clue', 'messages', 'help'].includes(route.page) && (
+            <Activity
+              kind={route.page}
+              item={currentItem}
+              records={activities}
+              onBack={back}
+              onSave={saveActivity}
               onNotify={setToast}
             />
           )}
