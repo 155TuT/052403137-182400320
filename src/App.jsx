@@ -5,6 +5,7 @@ import {
   CURRENT_USER,
   loadState,
   saveState,
+  searchItems,
   createItem,
   completeItem,
   upsertDraft,
@@ -12,7 +13,14 @@ import {
 import { Icon, Glyph, Button, PageHeader, PageTitle, Hero, EmptyState } from './ui.jsx';
 import Editor from './Editor.jsx';
 import Detail from './Detail.jsx';
+import Search from './Search.jsx';
 
+const presets = [
+  { label: '全部校园信息', category: '', area: '', days: 0 },
+  { label: '雨伞 · 图书馆 · 近 7 天', category: '雨伞', area: '图书馆', days: 7 },
+  { label: '钥匙 · 教学区 · 今天', category: '钥匙', area: '教学区', days: 1 },
+  { label: '水杯 · 食堂 · 近 7 天', category: '水杯', area: '食堂', days: 7 },
+];
 const statusOf = (item) =>
   item.status === 'completed'
     ? item.type === 'lost'
@@ -61,8 +69,7 @@ function ItemCard({ item, onOpen }) {
   );
 }
 function ItemGrid({ items, onOpen }) {
-  if (!items.length)
-    return <EmptyState description="当前校区还没有物品信息，可以切换校区继续浏览。" />;
+  if (!items.length) return <EmptyState />;
   return (
     <div className="item-grid">
       {[0, 1].map((column) => (
@@ -163,6 +170,42 @@ function PublishMenu({ onClose, onChoose, onDrafts }) {
     </Overlay>
   );
 }
+function FilterMenu({ value, onApply, onClose }) {
+  const [choice, setChoice] = useState(value);
+  return (
+    <Overlay title="筛选校园信息" className="filter-overlay" onClose={onClose}>
+      <div className="filter-sheet">
+        <div className="sheet-heading">
+          <h2>筛选</h2>
+          <button className="round-button" aria-label="关闭筛选" onClick={onClose}>
+            <Glyph name="close" />
+          </button>
+        </div>
+        <p className="muted">选择一组类别、区域和时间</p>
+        <div className="filter-options">
+          {presets.map((preset, i) => (
+            <button
+              key={i}
+              className={choice === i ? 'selected' : ''}
+              onClick={() => setChoice(i)}
+              aria-pressed={choice === i}
+            >
+              {choice === i ? '✓ ' : ''}
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <p className="muted">当前：{choice ? presets[choice].label : '全部 / 不限 / 不限'}</p>
+        <div className="two-actions">
+          <Button variant="secondary" onClick={() => setChoice(0)}>
+            重置
+          </Button>
+          <Button onClick={() => onApply(choice)}>查看结果</Button>
+        </div>
+      </div>
+    </Overlay>
+  );
+}
 function readInitial() {
   try {
     return { state: loadState(localStorage) || createInitialState(), error: '' };
@@ -179,6 +222,9 @@ export default function App() {
   const [trail, setTrail] = useState([]);
   const [modal, setModal] = useState(null);
   const [campus, setCampus] = useState(CAMPUSES[0]);
+  const [query, setQuery] = useState('');
+  const [submitted, setSubmitted] = useState(null);
+  const [filter, setFilter] = useState(0);
   const [toast, setToast] = useState('');
   useEffect(() => {
     if (!toast) return;
@@ -287,6 +333,24 @@ export default function App() {
     commit({ ...dataRef.current, items: completeItem(dataRef.current.items, id, CURRENT_USER.id) });
     setToast('状态已更新，谢谢你让小物回家。');
   }
+  function filtered(searchQuery = '') {
+    const preset = presets[filter];
+    let result = searchItems(data.items, {
+      query: searchQuery,
+      campus,
+      category: preset.category,
+      area: preset.area,
+    });
+    if (preset.days) {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      start.setDate(start.getDate() - preset.days + 1);
+      result = result.filter(
+        (item) => item.eventDate && new Date(`${item.eventDate}T12:00:00`) >= start,
+      );
+    }
+    return result;
+  }
   const ownItems = data.items.filter((item) => item.ownerId === CURRENT_USER.id),
     currentItem = data.items.find((item) => item.id === route.id);
   const home = route.page === 'home',
@@ -314,16 +378,25 @@ export default function App() {
                   {campus}
                   <Glyph name="chevron" size={16} />
                 </button>
+                <button
+                  className="round-button"
+                  aria-label="搜索物品"
+                  onClick={() => go({ page: 'search' })}
+                >
+                  <Glyph name="search" size={24} />
+                </button>
               </header>
               <main className="page-scroll with-nav">
                 <Hero />
                 <div className="section-heading">
                   <h2>校园里的小牵挂</h2>
+                  <button className="filter-button" onClick={() => setModal('filter')}>
+                    筛选
+                    <Glyph name="chevron" size={16} />
+                    {filter > 0 && <i />}
+                  </button>
                 </div>
-                <ItemGrid
-                  items={data.items.filter((item) => item.campus === campus)}
-                  onOpen={openItem}
-                />
+                <ItemGrid items={filtered()} onOpen={openItem} />
               </main>
             </>
           )}
@@ -417,6 +490,23 @@ export default function App() {
               </button>
             </nav>
           )}
+          {route.page === 'search' && (
+            <Search
+              query={query}
+              onQueryChange={setQuery}
+              submitted={submitted}
+              onSearch={setSubmitted}
+              campus={campus}
+              items={submitted === null ? [] : filtered(submitted)}
+              filter={filter}
+              filterLabel={presets[filter].label}
+              onFilter={() => setModal('filter')}
+              onClearFilters={() => setFilter(0)}
+              onBack={back}
+              onOpen={openItem}
+              onPublishLost={() => begin('lost')}
+            />
+          )}
           {route.page === 'drafts' && (
             <>
               <PageHeader title="草稿箱" onBack={() => tab('mine')} />
@@ -498,6 +588,16 @@ export default function App() {
             onClose={() => setModal(null)}
             onChoose={begin}
             onDrafts={() => go({ page: 'drafts' })}
+          />
+        )}
+        {modal === 'filter' && (
+          <FilterMenu
+            value={filter}
+            onClose={() => setModal(null)}
+            onApply={(value) => {
+              setFilter(value);
+              setModal(null);
+            }}
           />
         )}
         {modal === 'campus' && (

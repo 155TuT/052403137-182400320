@@ -1,0 +1,237 @@
+.shiban-search-page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.shiban-search-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  height: 64px;
+  padding: 10px 16px;
+}
+.shiban-search-field {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 22px;
+  background: #fff;
+}
+.shiban-search-field input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  line-height: 21px;
+}
+.shiban-search-field input::placeholder {
+  color: #707780;
+}
+.shiban-search-field button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+}
+.shiban-search-submit {
+  flex: none;
+  width: 70px;
+  height: 44px;
+  border-radius: 22px;
+  background: #c7ee38;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 21px;
+}
+.shiban-search-submit:disabled {
+  opacity: 1;
+  cursor: default;
+  background: #e2e5e8;
+  color: #9299a1;
+}
+.shiban-search-scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 16px;
+  overflow: auto;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+}
+.shiban-search-scroll::-webkit-scrollbar {
+  display: none;
+}
+.shiban-search-scroll > * {
+  flex-shrink: 0;
+}
+.shiban-search-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.shiban-search-intro h2,
+.shiban-search-empty-query h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 36px;
+  overflow-wrap: anywhere;
+}
+.shiban-search-intro p,
+.shiban-search-campus {
+  margin: 0;
+  color: #707780;
+  font-size: 14px;
+  line-height: 21px;
+}
+.shiban-search-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 24px;
+  background: #fff;
+}
+.shiban-search-card h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 27px;
+  overflow-wrap: anywhere;
+}
+.shiban-search-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 21px;
+  overflow-wrap: anywhere;
+}
+.shiban-search-recent {
+  min-height: 191px;
+}
+.shiban-search-scope {
+  min-height: 114px;
+}
+.shiban-search-recent > p,
+.shiban-search-scope > p {
+  color: #707780;
+}
+.shiban-search-keywords {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.shiban-search-keywords button {
+  height: 44px;
+  padding: 0 10px;
+  border-radius: 14px;
+  background: #f4f5f6;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 21px;
+}
+.shiban-search-result-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+.shiban-search-result-heading h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 30px;
+  overflow-wrap: anywhere;
+}
+.shiban-search-filter {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 90px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 22px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 21px;
+}
+.shiban-search-filter i {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #718c15;
+}
+.shiban-search-active-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #e9f4cc;
+  font-size: 12px;
+  line-height: 18px;
+}
+.shiban-search-active-filter button {
+  flex: none;
+  padding: 3px 0;
+  background: none;
+  font-size: 12px;
+}
+.shiban-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.shiban-search-result {
+  width: 100%;
+  text-align: left;
+}
+.shiban-search-result > p,
+.shiban-search-empty > p {
+  color: #707780;
+}
+.shiban-search-empty-query {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.shiban-search-empty-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (max-width: 374px) {
+  .shiban-search-header {
+    gap: 8px;
+  }
+  .shiban-search-submit {
+    width: 60px;
+  }
+  .shiban-search-recent,
+  .shiban-search-scope {
+    min-height: auto;
+  }
+}
