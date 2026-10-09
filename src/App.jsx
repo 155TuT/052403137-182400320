@@ -3,6 +3,7 @@ import { createInitialState } from './seed.js';
 import {
   CAMPUSES,
   CURRENT_USER,
+  STORAGE_KEY,
   loadState,
   saveState,
   searchItems,
@@ -235,6 +236,20 @@ export default function App() {
     const timer = setTimeout(() => setToast(''), 3400);
     return () => clearTimeout(timer);
   }, [toast]);
+  useEffect(() => {
+    function onStorage(event) {
+      if (event.key !== STORAGE_KEY || !event.newValue) return;
+      try {
+        const latest = JSON.parse(event.newValue);
+        dataRef.current = latest;
+        setData(latest);
+      } catch {
+        // ignore malformed cross-tab payloads
+      }
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
   function go(next, replace = false) {
     setModal(null);
     if (!replace) setTrail((current) => [...current, route]);
@@ -255,10 +270,20 @@ export default function App() {
   function commit(next) {
     if (initial.error)
       throw new Error('原有本地数据读取失败，已停止覆盖。请换用可用的浏览器存储后重试。');
-    const saved = saveState(localStorage, next);
-    dataRef.current = saved;
-    setData(saved);
-    return saved;
+    try {
+      const saved = saveState(localStorage, next, dataRef.current.revision ?? 0);
+      dataRef.current = saved;
+      setData(saved);
+      return saved;
+    } catch (error) {
+      if (error?.code === 'STATE_CONFLICT') {
+        const latest = loadState(localStorage) || createInitialState();
+        dataRef.current = latest;
+        setData(latest);
+        setToast('数据已在其他页面更新，已载入最新内容，请重新操作。');
+      }
+      throw error;
+    }
   }
   function openItem(item) {
     go({ page: 'detail', id: item.id });

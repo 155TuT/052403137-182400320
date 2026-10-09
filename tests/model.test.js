@@ -278,6 +278,35 @@ test('published changes and owner state survive storage roundtrip', () => {
   assert.equal(reloaded.currentUser.id, 'me');
   assert.equal(reloaded.drafts.length, 4);
 });
+test('a stale snapshot cannot overwrite newer data from another tab', () => {
+  const local = storage();
+  const initial = saveState(local, createInitialState());
+  const tabA = loadState(local);
+  const tabB = loadState(local);
+  assert.equal(tabA.revision, 1);
+
+  // A 发布新记录
+  const newItem = createItem(valid({ name: '并发测试物品' }), {
+    id: 'concurrent-item',
+    now,
+    items: tabA.items,
+  });
+  const afterA = saveState(local, { ...tabA, items: [newItem, ...tabA.items] }, tabA.revision);
+  assert.equal(afterA.revision, 2);
+
+  // B 用旧快照保存草稿 → 冲突，A 的记录不被覆盖
+  assert.throws(
+    () =>
+      saveState(
+        local,
+        { ...tabB, drafts: [{ id: 'b-draft', ownerId: 'me', name: 'B 的草稿' }] },
+        tabB.revision,
+      ),
+    (error) => error.code === 'STATE_CONFLICT',
+  );
+  const latest = loadState(local);
+  assert.ok(latest.items.some((item) => item.id === 'concurrent-item'));
+});
 test('invalid pictures in items or drafts cannot overwrite previously saved valid state', () => {
   for (const collection of ['items', 'drafts']) {
     const local = storage();

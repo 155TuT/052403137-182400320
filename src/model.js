@@ -316,13 +316,43 @@ export function loadState(storage) {
   return migrated;
 }
 
-export function saveState(storage, state) {
+function readRevision(storage) {
+  if (!storage || typeof storage.getItem !== 'function') return 0;
+  let raw;
+  try {
+    raw = storage.getItem(STORAGE_KEY);
+  } catch {
+    return 0;
+  }
+  if (raw === null) return 0;
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed?.revision === 'number' ? parsed.revision : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function saveState(storage, state, baseRevision) {
   if (!storage || typeof storage.setItem !== 'function')
     throw new Error('浏览器未提供可用的本地存储。');
   validateState(state);
+  const currentRevision = readRevision(storage);
+  if (baseRevision !== undefined && baseRevision !== currentRevision) {
+    const error = new Error(
+      '本地数据已在其他页面更新，为避免覆盖，本次修改未保存。请重新载入后再试。',
+    );
+    error.code = 'STATE_CONFLICT';
+    error.revision = currentRevision;
+    throw error;
+  }
   let serialized;
   try {
-    serialized = JSON.stringify({ ...state, schemaVersion: SCHEMA_VERSION });
+    serialized = JSON.stringify({
+      ...state,
+      revision: currentRevision + 1,
+      schemaVersion: SCHEMA_VERSION,
+    });
   } catch {
     throw new Error('本地数据无法序列化，未保存本次修改。');
   }
