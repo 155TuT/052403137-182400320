@@ -26,6 +26,7 @@ import Editor from './Editor.jsx';
 import Detail from './Detail.jsx';
 import Activity from './Activity.jsx';
 import Search from './Search.jsx';
+import { formatDateLabel } from './dateLabel.js';
 
 const presets = [
   { label: '全部校园信息', category: '', area: '', days: 0 },
@@ -41,11 +42,7 @@ const statusOf = (item) =>
     : item.type === 'lost'
       ? '正在寻找'
       : item.custody || '等待认领';
-const dateOf = (item) =>
-  item.timeLabel ||
-  (item.eventDate
-    ? `${item.eventDate.slice(5).replace('-', '月')}日${item.type === 'lost' ? '遗失' : '拾得'}`
-    : '时间不确定');
+const dateOf = (item) => formatDateLabel(item);
 
 function ItemCard({ item, onOpen }) {
   return (

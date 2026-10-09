@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { Button, Glyph, ItemArtwork } from './ui.jsx';
 import './search.css';
+import { formatDateLabel } from './dateLabel.js';
 
 const recentWords = ['雨伞', '钥匙', '保温杯', '耳机'];
 
@@ -10,9 +11,7 @@ function statusOf(item) {
 }
 
 function dateOf(item) {
-  if (item.displayTime || item.timeLabel) return item.displayTime || item.timeLabel;
-  const match = String(item.eventDate || '').match(/^\d{4}-(\d{2})-(\d{2})$/);
-  return match ? `${Number(match[1])}月${Number(match[2])}日` : '时间不确定';
+  return formatDateLabel(item);
 }
 
 export default function Search({

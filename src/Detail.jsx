@@ -2,13 +2,10 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { Button, InfoCard, PageHeader, PageTitle } from './ui.jsx';
 import { getItemTitle, getItemPhotoUrls } from './itemPresentation.js';
 import './detail.css';
+import { formatDateLabel } from './dateLabel.js';
 
 function displayDate(item) {
-  if (item.displayTime || item.timeLabel) return item.displayTime || item.timeLabel;
-  const match = String(item.eventDate || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return match
-    ? `${Number(match[2])}月${Number(match[3])}日${item.type === 'lost' ? '遗失' : item.relation === 'transfer' ? '线索' : '拾得'}`
-    : '时间待补充';
+  return formatDateLabel(item);
 }
 
 export default function Detail({
