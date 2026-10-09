@@ -279,6 +279,20 @@ function validateState(state) {
   }
 }
 
+/** 移除旧的相对 timeLabel，若其中带 HH:mm 则保留为 eventTime。 */
+function migrateItem(item) {
+  if (!isObject(item) || !('timeLabel' in item)) return item;
+  const { timeLabel, ...rest } = item;
+  const match = String(timeLabel || '').match(/(\d{1,2}):(\d{2})/);
+  if (match) rest.eventTime = `${match[1].padStart(2, '0')}:${match[2]}`;
+  return rest;
+}
+
+function migrateState(state) {
+  if (!Array.isArray(state.items)) return state;
+  return { ...state, items: state.items.map(migrateItem) };
+}
+
 export function loadState(storage) {
   if (!storage || typeof storage.getItem !== 'function')
     throw new Error('浏览器未提供可用的本地存储。');
@@ -297,8 +311,9 @@ export function loadState(storage) {
   }
   if (!isObject(state) || state.schemaVersion !== SCHEMA_VERSION)
     throw new Error('本地数据版本不兼容，请先备份再重置演示数据。');
-  validateState(state);
-  return state;
+  const migrated = migrateState(state);
+  validateState(migrated);
+  return migrated;
 }
 
 export function saveState(storage, state) {
