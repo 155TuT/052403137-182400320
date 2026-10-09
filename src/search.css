@@ -207,8 +207,20 @@
 .shiban-search-result {
   width: 100%;
   text-align: left;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
 }
-.shiban-search-result > p,
+.shiban-search-result > img {
+  flex: none;
+}
+.shiban-search-result-copy {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.shiban-search-result-copy > p,
 .shiban-search-empty > p {
   color: #707780;
 }

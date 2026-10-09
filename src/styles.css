@@ -56,6 +56,11 @@ img {
   display: block;
   max-width: 100%;
 }
+.item-artwork-photo {
+  object-fit: cover;
+  border-radius: 12px;
+  flex: none;
+}
 button {
   transition:
     filter 0.15s ease,
@@ -1023,7 +1028,6 @@ button:active {
   padding: 16px;
   min-height: 118px;
 }
-.with-nav .record-image,
 .with-nav .record-row > .glyph {
   display: none;
 }

@@ -10,7 +10,18 @@ import {
   completeItem,
   upsertDraft,
 } from './model.js';
-import { Icon, Glyph, Button, PageHeader, PageTitle, Hero, InfoCard, EmptyState } from './ui.jsx';
+import {
+  Icon,
+  ItemArtwork,
+  Glyph,
+  Button,
+  PageHeader,
+  PageTitle,
+  Hero,
+  InfoCard,
+  EmptyState,
+} from './ui.jsx';
+import { getItemIcon } from './itemPresentation.js';
 import Editor from './Editor.jsx';
 import Detail from './Detail.jsx';
 import Activity from './Activity.jsx';
@@ -30,8 +41,6 @@ const statusOf = (item) =>
     : item.type === 'lost'
       ? '正在寻找'
       : item.custody || '等待认领';
-const iconOf = (item) =>
-  ['umbrella', 'keys', 'bottle'].includes(item.image) ? item.image : 'mascot-pocket';
 const dateOf = (item) =>
   item.timeLabel ||
   (item.eventDate
@@ -46,14 +55,10 @@ function ItemCard({ item, onOpen }) {
       aria-label={`${item.name}，${statusOf(item)}，查看详情`}
     >
       <div
-        className={`item-picture ${iconOf(item) === 'umbrella' ? 'item-picture--tall' : ''}`}
+        className={`item-picture ${getItemIcon(item) === 'umbrella' ? 'item-picture--tall' : ''}`}
         style={{ background: item.color || '#e1e7d8' }}
       >
-        {item.images?.[0]?.dataUrl ? (
-          <img className="item-photo" src={item.images[0].dataUrl} alt={item.name} />
-        ) : (
-          <Icon name={iconOf(item)} size={112} />
-        )}
+        <ItemArtwork item={item} size={112} photoClassName="item-photo" />
       </div>
       <div className="item-copy">
         <span className={`type-chip ${item.type === 'lost' ? 'type-chip--lost' : ''}`}>
@@ -714,7 +719,7 @@ function RecordRow({ item, subtitle, action, onClick }) {
   return (
     <button className="record-row" onClick={onClick}>
       <span className="record-image" style={{ background: item.color || '#e9f4cc' }}>
-        <Icon name={iconOf(item)} size={56} />
+        <ItemArtwork item={item} size={56} />
       </span>
       <span className="record-copy">
         <strong>{item.name || '未命名的小物'}</strong>

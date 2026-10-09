@@ -1,32 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { Button, InfoCard, PageHeader, PageTitle } from './ui.jsx';
+import { getItemTitle, getItemPhotoUrls } from './itemPresentation.js';
 import './detail.css';
-
-const ICONS = new Set([
-  'umbrella',
-  'keys',
-  'bottle',
-  'service',
-  'home',
-  'publish',
-  'search',
-  'mascot-pocket',
-]);
-
-function itemIcon(item) {
-  const image = String(item.image || '').replace(/\.svg$/i, '');
-  if (ICONS.has(image)) return image;
-  return { 雨伞: 'umbrella', 钥匙: 'keys', 水杯: 'bottle' }[item.category] || 'mascot-pocket';
-}
-
-function detailTitle(item, completed) {
-  if (completed) return '它已经回家啦';
-  const icon = itemIcon(item);
-  if (item.type === 'lost') return icon === 'bottle' ? '帮我留意这只小杯子' : '帮我留意这件小物';
-  if (item.relation === 'transfer') return '这条线索，还待核实';
-  if (item.relation === 'service') return '服务点移交，待确认';
-  return { umbrella: '有把伞在等主人', keys: '这串钥匙，在等你' }[icon] || '有件小物，在等主人';
-}
 
 function displayDate(item) {
   if (item.displayTime || item.timeLabel) return item.displayTime || item.timeLabel;
@@ -169,12 +144,7 @@ export default function Detail({
     );
   }
 
-  const imageUrls = (Array.isArray(item.images) ? item.images : [])
-    .map((image) => (typeof image === 'string' ? image : image?.dataUrl))
-    .filter(
-      (url) => typeof url === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,/i.test(url),
-    )
-    .slice(0, 3);
+  const imageUrls = getItemPhotoUrls(item);
   const code = { umbrella: 'XB-001', keys: 'XB-026', bottle: 'XB-021' }[item.id];
   const subtitle = [code, completed ? doneLabel : activeLabel].filter(Boolean).join(' · ');
   const transfer = item.type !== 'lost' && item.relation === 'transfer';
@@ -196,7 +166,7 @@ export default function Detail({
       : item.source || (item.type === 'lost' ? '失主本人发布' : '拾物者登记');
   const claimLabel =
     item.type === 'lost'
-      ? itemIcon(item) === 'bottle'
+      ? item.category === '水杯'
         ? '我捡到相似水杯'
         : '我捡到相似物品'
       : transfer
@@ -210,11 +180,7 @@ export default function Detail({
       <div className="detail-content" inert={confirmOpen ? true : undefined}>
         <PageHeader title={item.type === 'lost' ? '寻物详情' : '招领详情'} onBack={onBack} />
         <main className="detail-scroll">
-          <PageTitle
-            title={detailTitle(item, completed)}
-            subtitle={subtitle}
-            icon={completed ? 'mascot-pocket' : itemIcon(item)}
-          />
+          <PageTitle title={getItemTitle(item, completed)} subtitle={subtitle} item={item} />
           <InfoCard title={item.name} className="detail-card">
             <p className="detail-description">{item.description || '发布者还没有补充描述。'}</p>
             {imageUrls.length > 0 && (

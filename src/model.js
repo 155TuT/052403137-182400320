@@ -1,14 +1,7 @@
 /** Local coursework data model. Browser storage is persistence, not server authentication. */
+import { CATEGORIES, getItemIcon } from './itemPresentation.js';
+export { CATEGORIES };
 export const CURRENT_USER = Object.freeze({ id: 'me', name: '小拾同学' });
-export const CATEGORIES = Object.freeze([
-  '雨伞',
-  '钥匙',
-  '水杯',
-  '数码',
-  '证件',
-  '书本文具',
-  '其他',
-]);
 export const CAMPUSES = Object.freeze(['旗山校区', '铜盘校区']);
 export const STORAGE_KEY = 'shiban-state-v1';
 export const SCHEMA_VERSION = 1;
@@ -201,9 +194,7 @@ export function createItem(
     description: text(input.description),
     contact: text(input.contact),
     status: 'active',
-    image:
-      text(input.image) ||
-      ({ 雨伞: 'umbrella', 钥匙: 'keys', 水杯: 'bottle' }[input.category] ?? 'other'),
+    image: getItemIcon(input),
     color: text(input.color) || '#e6efeb',
     createdAt,
     updatedAt: createdAt,
@@ -246,6 +237,7 @@ export function upsertDraft(drafts, draft) {
     status: 'draft',
     updatedAt: dateOf().toISOString(),
   };
+  updated.image = getItemIcon(updated);
   const imagesError = imageError(updated.images);
   if (imagesError) throw new Error(`草稿图片无效：${imagesError}`);
   return previous
