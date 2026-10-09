@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Button, Glyph } from './ui.jsx';
+import { Button, Glyph, ItemArtwork } from './ui.jsx';
 import './search.css';
 
 const recentWords = ['雨伞', '钥匙', '保温杯', '耳机'];
@@ -130,12 +130,15 @@ export default function Search({
                   onClick={() => onOpen(item)}
                   aria-label={`${item.name}，${item.type === 'lost' ? '寻物' : '招领'}，查看详情`}
                 >
-                  <h3>
-                    {item.name} · {item.type === 'lost' ? '寻物' : '招领'}
-                  </h3>
-                  <p>
-                    {item.area}｜{dateOf(item)}｜{statusOf(item)}
-                  </p>
+                  <ItemArtwork item={item} size={48} />
+                  <div className="shiban-search-result-copy">
+                    <h3>
+                      {item.name} · {item.type === 'lost' ? '寻物' : '招领'}
+                    </h3>
+                    <p>
+                      {item.area}｜{dateOf(item)}｜{statusOf(item)}
+                    </p>
+                  </div>
                 </button>
               ))}
             </div>

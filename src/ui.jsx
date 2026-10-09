@@ -1,4 +1,5 @@
 import React from 'react';
+import { getItemIcon, getItemPhotoUrls } from './itemPresentation.js';
 
 const aliases = {
   key: 'keys',
@@ -32,6 +33,21 @@ export function Glyph({ name, size = 20 }) {
     />
   );
 }
+export function ItemArtwork({ item, size = 72, photoClassName = '', alt = '' }) {
+  const photo = getItemPhotoUrls(item)[0];
+  return photo ? (
+    <img
+      className={`item-artwork-photo ${photoClassName}`}
+      src={photo}
+      width={size}
+      height={size}
+      alt={alt}
+      draggable="false"
+    />
+  ) : (
+    <Icon name={getItemIcon(item)} size={size} alt={alt} />
+  );
+}
 export function Button({ children, variant = 'primary', className = '', ...props }) {
   return (
     <button type="button" className={`button button--${variant} ${className}`} {...props}>
@@ -50,14 +66,14 @@ export function PageHeader({ title, onBack, actions }) {
     </header>
   );
 }
-export function PageTitle({ title, subtitle, icon = 'mascot-pocket' }) {
+export function PageTitle({ title, subtitle, icon = 'mascot-pocket', item }) {
   return (
     <div className="page-title">
       <div>
         <h2>{title}</h2>
         {subtitle && <p>{subtitle}</p>}
       </div>
-      <Icon name={icon} size={72} />
+      {item ? <ItemArtwork item={item} size={72} /> : <Icon name={icon} size={72} />}
     </div>
   );
 }

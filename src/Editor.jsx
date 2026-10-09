@@ -101,13 +101,6 @@ export default function Editor({
         : '发布招领';
   const isPreview = step === 'preview';
   const locked = Boolean(working) || published;
-  const itemIcon =
-    form.category === '水杯' || /杯|瓶/.test(form.name)
-      ? 'bottle'
-      : form.category === '雨伞' || /伞/.test(form.name) || lost
-        ? 'umbrella'
-        : 'keys';
-
   function change(name, value) {
     setForm((current) => ({ ...current, [name]: value }));
     setErrors((current) => ({ ...current, [name]: undefined }));
@@ -264,7 +257,7 @@ export default function Editor({
                     ? '本人寻物 · 先写下你记得的'
                     : '本人拾得 · 图片不是必填'
           }
-          icon={itemIcon}
+          item={form}
         />
         {failure ? (
           <div className="editor-message editor-message--error" role="alert">
