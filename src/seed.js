@@ -136,6 +136,7 @@ export function createInitialState() {
   return JSON.parse(
     JSON.stringify({
       schemaVersion: SCHEMA_VERSION,
+      revision: 0,
       items: seedItems,
       drafts: seedDrafts,
       currentUser: CURRENT_USER,
