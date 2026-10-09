@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" role="img" aria-labelledby="electronics-title electronics-description">
+  <title id="electronics-title">手机与耳机</title>
+  <desc id="electronics-description">淡蓝手机、荧光绿屏幕与暖橙无线耳机盒，表示数码物品。</desc>
+  <g id="campus-electronics" stroke="#252B32" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect id="phone-body" x="23" y="14" width="57" height="99" rx="12" fill="#D9ECFC"/>
+    <rect id="phone-screen" x="31" y="29" width="41" height="61" rx="5" fill="#C7EE38" stroke-width="3"/>
+    <path id="phone-speaker" d="M44 22H59" stroke-width="3"/>
+    <path id="screen-wave" d="M39 61H45L50 49L56 72L61 61H65" stroke-width="3"/>
+    <path id="phone-home" d="M46 102H57" stroke-width="3"/>
+    <rect id="earbuds-case" x="67" y="73" width="47" height="37" rx="12" fill="#FFBD73"/>
+    <path id="case-lid" d="M69 87H112" stroke-width="3"/>
+    <path id="left-earbud" d="M83 62V73M83 62C73 63 73 51 80 51H83V62Z" fill="#FFFFFF" stroke-width="3"/>
+    <path id="right-earbud" d="M99 62V73M99 62C109 63 109 51 102 51H99V62Z" fill="#FFFFFF" stroke-width="3"/>
+    <circle id="case-indicator" cx="91" cy="99" r="2.5" fill="#252B32" stroke="none"/>
+    <path id="electronics-sparkle" d="M101 23V33M96 28H106" stroke-width="3"/>
+  </g>
+</svg>

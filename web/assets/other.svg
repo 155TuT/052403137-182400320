@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" role="img" aria-labelledby="other-title other-description">
+  <title id="other-title">随身收纳包</title>
+  <desc id="other-description">暖橙收纳包、荧光绿提手与淡蓝口袋，表示尚未细分的其他物品。</desc>
+  <g id="campus-pouch" stroke="#252B32" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <path id="pouch-handle" d="M43 44V31Q43 17 57 17H71Q85 17 85 31V44H75V32Q75 27 70 27H58Q53 27 53 32V44Z" fill="#C7EE38"/>
+    <path id="pouch-body" d="M32 40H96Q105 40 106 51L112 97Q113 111 99 111H29Q15 111 16 97L22 51Q23 40 32 40Z" fill="#FFBD73"/>
+    <path id="pouch-zipper" d="M27 55H100" stroke-width="3"/>
+    <path id="zipper-pull" d="M91 55V64" stroke-width="3"/>
+    <rect id="zipper-tab" x="87" y="63" width="8" height="12" rx="3" fill="#C7EE38" stroke-width="2.5"/>
+    <path id="blue-pocket" d="M37 72H78V88Q78 99 67 99H48Q37 99 37 88Z" fill="#D9ECFC" stroke-width="3"/>
+    <path id="pocket-opening" d="M45 80H70" stroke-width="2.5"/>
+    <path id="pouch-seam" d="M24 91V98Q24 103 29 103M101 89L103 98Q103 103 98 103" stroke-width="2.5"/>
+    <path id="pouch-sparkle" d="M105 20V30M100 25H110" stroke-width="3"/>
+  </g>
+</svg>
