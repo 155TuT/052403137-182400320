@@ -70,6 +70,14 @@ test('contact supports declared email, QQ and WeChat but rejects unusable text',
   }
   assert.ok(validateItem(valid({ contact: '有缘自会相见' }), { now }).contact);
 });
+test('contact rejects pure symbols and incomplete phone numbers', () => {
+  for (const contact of ['-------', '(((((((', '电话：()--()-', '电话：', '电话：12']) {
+    assert.ok(validateItem(valid({ contact }), { now }).contact, `应拒绝: ${contact}`);
+  }
+  for (const contact of ['010-12345678', '13800000000', '电话：010-12345678', '手机：13800000000']) {
+    assert.equal(validateItem(valid({ contact }), { now }).contact, undefined, `应接受: ${contact}`);
+  }
+});
 test('photo count, type and file size follow the optional image limits', () => {
   const image = photo();
   assert.equal(validateItem(valid({ images: [image] }), { now }).images, undefined);
