@@ -40,13 +40,15 @@ function newId(prefix) {
   return `${prefix}-${random}`;
 }
 
-function contactIsValid(contact) {
+export function isValidContact(contact) {
   // A named method is accepted; contact need not be a telephone number.
-  const compact = contact.replace(/\s+/g, '');
+  const compact = text(contact).replace(/\s+/g, '');
+  if (!compact) return false;
   const email = compact.replace(/^(?:示例)?(?:邮箱|email)[:：]/i, '');
   if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return true;
   if (/^(?:(?:示例)?QQ[:：]?)?[1-9]\d{4,12}$/i.test(compact)) return true;
-  if (/^(?:(?:电话|手机|tel)[:：]?)?\+?[\d()\-]{7,22}$/i.test(compact)) return true;
+  const phone = compact.replace(/^(?:(?:电话|手机|tel)[:：]?)?/i, '');
+  if (/^\+?[\d()\-]{7,22}$/.test(phone) && phone.replace(/\D/g, '').length >= 5) return true;
   if (/^(?:示例)?(?:微信|wechat)[:：]?[a-zA-Z][a-zA-Z\d_-]{5,19}$/i.test(compact)) return true;
   return false;
 }
@@ -123,7 +125,7 @@ export function validateItem(input, { now = new Date() } = {}) {
   if (length(text(item.description)) > 300) errors.description = '补充描述不能超过 300 个字。';
   const contact = text(item.contact);
   if (!contact) errors.contact = '请留下邮箱、电话、QQ 或微信，方便对方联系。';
-  else if (length(contact) > 80 || !contactIsValid(contact))
+  else if (length(contact) > 80 || !isValidContact(contact))
     errors.contact = '请填写有效邮箱、电话号码，或注明 QQ / 微信号码。';
   const imagesError = imageError(item.images);
   if (imagesError) errors.images = imagesError;

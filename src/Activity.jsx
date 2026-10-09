@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { PageHeader, PageTitle, InfoCard, Button, EmptyState } from './ui.jsx';
 import './activity.css';
+import { isValidContact } from './model.js';
 
 function formatTime(value) {
   const date = new Date(value);
@@ -13,17 +14,6 @@ function formatTime(value) {
         minute: '2-digit',
         hour12: false,
       }).format(date);
-}
-
-function validContact(value) {
-  const compact = value.replace(/\s+/g, '');
-  const email = compact.replace(/^(?:邮箱|email)[:：]/i, '');
-  return (
-    /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ||
-    /^(?:QQ[:：]?)?[1-9]\d{4,12}$/i.test(compact) ||
-    /^(?:(?:电话|手机|tel)[:：]?)?\+?[\d()\-]{7,22}$/i.test(compact) ||
-    /^(?:微信|wechat)[:：]?[a-zA-Z][a-zA-Z\d_-]{5,19}$/i.test(compact)
-  );
 }
 
 export default function Activity({ kind = 'clue', item, records = [], onBack, onSave, onNotify }) {
@@ -63,7 +53,7 @@ export default function Activity({ kind = 'clue', item, records = [], onBack, on
         : '请写下线索内容，例如时间、地点与看到的情况。';
     else if ([...content.trim()].length > 500) nextErrors.content = '内容请控制在 500 字以内。';
     if (!contact.trim()) nextErrors.contact = '请填写你的联系方式。';
-    else if ([...contact.trim()].length > 80 || !validContact(contact.trim()))
+    else if ([...contact.trim()].length > 80 || !isValidContact(contact.trim()))
       nextErrors.contact = '请填写有效邮箱、电话，或注明 QQ / 微信号码。';
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) {
