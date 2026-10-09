@@ -245,6 +245,15 @@ export function upsertDraft(drafts, draft) {
     : [updated, ...drafts];
 }
 
+/** An edit draft is stale when its source item no longer exists or is no longer active. */
+export function isDraftStale(draft, items) {
+  if (!isObject(draft) || !text(draft.sourceItemId)) return false;
+  const source = Array.isArray(items)
+    ? items.find((item) => item.id === draft.sourceItemId)
+    : undefined;
+  return !source || source.status !== 'active';
+}
+
 function validateState(state) {
   if (
     !isObject(state) ||

@@ -9,6 +9,7 @@ import {
   createItem,
   completeItem,
   upsertDraft,
+  isDraftStale,
 } from './model.js';
 import {
   Icon,
@@ -337,6 +338,11 @@ export default function App() {
     commit({ ...dataRef.current, items: completeItem(dataRef.current.items, id, CURRENT_USER.id) });
     setToast('状态已更新，谢谢你让小物回家。');
   }
+  function discardDraft(id) {
+    const drafts = dataRef.current.drafts.filter((record) => record.id !== id);
+    commit({ ...dataRef.current, drafts });
+    setToast('已丢弃失效草稿。');
+  }
   function saveActivity(record) {
     commit({
       ...dataRef.current,
@@ -584,26 +590,34 @@ export default function App() {
                   icon="drafts"
                 />
                 {data.drafts.length ? (
-                  data.drafts.map((draft) => (
-                    <RecordRow
-                      key={draft.id}
-                      item={draft}
-                      subtitle={
-                        draft.progress ||
-                        `${draft.type === 'lost' ? '寻物' : '招领'}草稿 · 尚未发布`
-                      }
-                      action="继续填写"
-                      onClick={() =>
-                        go({
-                          page: 'editor',
-                          type: draft.type,
-                          draftId: draft.id,
-                          editId: draft.sourceItemId,
-                          relation: draft.relation,
-                        })
-                      }
-                    />
-                  ))
+                  data.drafts.map((draft) => {
+                    const stale = isDraftStale(draft, data.items);
+                    return (
+                      <RecordRow
+                        key={draft.id}
+                        item={draft}
+                        subtitle={
+                          stale
+                            ? '已失效 · 原记录已结案'
+                            : draft.progress ||
+                              `${draft.type === 'lost' ? '寻物' : '招领'}草稿 · 尚未发布`
+                        }
+                        action={stale ? '丢弃' : '继续填写'}
+                        onClick={
+                          stale
+                            ? () => discardDraft(draft.id)
+                            : () =>
+                                go({
+                                  page: 'editor',
+                                  type: draft.type,
+                                  draftId: draft.id,
+                                  editId: draft.sourceItemId,
+                                  relation: draft.relation,
+                                })
+                        }
+                      />
+                    );
+                  })
                 ) : (
                   <EmptyState
                     title="草稿箱空空的"

@@ -8,6 +8,7 @@ import {
   createItem,
   completeItem,
   upsertDraft,
+  isDraftStale,
   loadState,
   saveState,
 } from '../src/model.js';
@@ -232,6 +233,16 @@ test('saving a draft cannot overwrite another users draft with the same id', () 
     () => upsertDraft([{ id: 'private', ownerId: 'other' }], { id: 'private', ownerId: 'me' }),
     /其他用户/,
   );
+});
+test('edit drafts become stale when their source item is completed or missing', () => {
+  const items = [
+    { id: 'active-item', ownerId: 'me', status: 'active', name: '在案', type: 'found' },
+    { id: 'done-item', ownerId: 'me', status: 'completed', name: '已结案', type: 'found' },
+  ];
+  assert.equal(isDraftStale({ id: 'd1', sourceItemId: 'active-item' }, items), false);
+  assert.equal(isDraftStale({ id: 'd2', sourceItemId: 'done-item' }, items), true);
+  assert.equal(isDraftStale({ id: 'd3', sourceItemId: 'missing' }, items), true);
+  assert.equal(isDraftStale({ id: 'd4' }, items), false);
 });
 test('draft picture checks do not introduce required publication fields', () => {
   const draft = { id: 'partial-photo', ownerId: 'me', images: [photo()] };
