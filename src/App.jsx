@@ -39,6 +39,11 @@ const presets = [
   { label: '钥匙 · 教学区 · 今天', category: '钥匙', area: '教学区', days: 1 },
   { label: '水杯 · 食堂 · 近 7 天', category: '水杯', area: '食堂', days: 7 },
 ];
+const mineTabs = [
+  ['published', '我发布的'],
+  ['claim', '我认领的'],
+  ['clue', '我协助的'],
+];
 const statusOf = (item) =>
   item.status === 'completed'
     ? item.type === 'lost'
@@ -234,6 +239,7 @@ export default function App() {
   const [submitted, setSubmitted] = useState(null);
   const [filter, setFilter] = useState(0);
   const [mineTab, setMineTab] = useState('published');
+  const mineTabRefs = useRef({});
   const [toast, setToast] = useState('');
   const [storageError, setStorageError] = useState(initial.error);
   useEffect(() => {
@@ -273,6 +279,30 @@ export default function App() {
     setTrail([]);
     setRoute({ page });
     setModal(null);
+  }
+  function navigateMineTabs(event, value) {
+    const index = mineTabs.findIndex(([key]) => key === value);
+    let nextIndex;
+    switch (event.key) {
+      case 'ArrowRight':
+        nextIndex = (index + 1) % mineTabs.length;
+        break;
+      case 'ArrowLeft':
+        nextIndex = (index - 1 + mineTabs.length) % mineTabs.length;
+        break;
+      case 'Home':
+        nextIndex = 0;
+        break;
+      case 'End':
+        nextIndex = mineTabs.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    const next = mineTabs[nextIndex][0];
+    setMineTab(next);
+    mineTabRefs.current[next]?.focus();
   }
   async function commit(mutate, expected = []) {
     try {
@@ -556,53 +586,74 @@ export default function App() {
                   </span>
                   <Glyph name="right" />
                 </button>
-                <div className="mine-tabs" role="tablist" aria-label="我的记录">
-                  {[
-                    ['published', '我发布的'],
-                    ['claim', '我认领的'],
-                    ['clue', '我协助的'],
-                  ].map(([value, label]) => (
+                <div
+                  className="mine-tabs"
+                  role="tablist"
+                  aria-label="我的记录"
+                  aria-orientation="horizontal"
+                >
+                  {mineTabs.map(([value, label]) => (
                     <button
                       key={value}
+                      id={`mine-tab-${value}`}
+                      ref={(node) => {
+                        mineTabRefs.current[value] = node;
+                      }}
+                      type="button"
                       role="tab"
                       aria-selected={mineTab === value}
+                      aria-controls={`mine-panel-${value}`}
+                      tabIndex={mineTab === value ? 0 : -1}
                       onClick={() => setMineTab(value)}
+                      onKeyDown={(event) => navigateMineTabs(event, value)}
                     >
                       {label}
                     </button>
                   ))}
                 </div>
-                {mineTab === 'published' ? (
-                  ownItems.length ? (
-                    ownItems.map((item) => (
-                      <RecordRow
-                        key={item.id}
-                        item={item}
-                        subtitle={`${item.id === 'keys' ? 'XB-026' : '我的发布'} · ${statusOf(item)}`}
-                        onClick={() => openItem(item)}
+                {mineTabs.map(([value]) => (
+                  <div
+                    key={value}
+                    id={`mine-panel-${value}`}
+                    className="mine-tabpanel"
+                    role="tabpanel"
+                    aria-labelledby={`mine-tab-${value}`}
+                    tabIndex={0}
+                    hidden={mineTab !== value}
+                  >
+                    {value === 'published' ? (
+                      ownItems.length ? (
+                        ownItems.map((item) => (
+                          <RecordRow
+                            key={item.id}
+                            item={item}
+                            subtitle={`${item.id === 'keys' ? 'XB-026' : '我的发布'} · ${statusOf(item)}`}
+                            onClick={() => openItem(item)}
+                          />
+                        ))
+                      ) : (
+                        <EmptyState
+                          title="还没有发布记录"
+                          description="从右下角开始，发布你的第一件小物。"
+                        />
+                      )
+                    ) : activities.filter((record) => record.kind === value).length ? (
+                      activities
+                        .filter((record) => record.kind === value)
+                        .map((record) => (
+                          <InfoCard key={record.id} title={record.itemName}>
+                            <p>{record.content}</p>
+                            <p className="muted">本机记录 · 尚需自行联系对方</p>
+                          </InfoCard>
+                        ))
+                    ) : (
+                      <EmptyState
+                        title="好事，从这一次开始"
+                        description="留下的认领信息和线索会出现在这里。"
                       />
-                    ))
-                  ) : (
-                    <EmptyState
-                      title="还没有发布记录"
-                      description="从右下角开始，发布你的第一件小物。"
-                    />
-                  )
-                ) : activities.filter((record) => record.kind === mineTab).length ? (
-                  activities
-                    .filter((record) => record.kind === mineTab)
-                    .map((record) => (
-                      <InfoCard key={record.id} title={record.itemName}>
-                        <p>{record.content}</p>
-                        <p className="muted">本机记录 · 尚需自行联系对方</p>
-                      </InfoCard>
-                    ))
-                ) : (
-                  <EmptyState
-                    title="好事，从这一次开始"
-                    description="留下的认领信息和线索会出现在这里。"
-                  />
-                )}
+                    )}
+                  </div>
+                ))}
               </main>
             </>
           )}
