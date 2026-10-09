@@ -5,7 +5,9 @@ import {
   CURRENT_USER,
   STORAGE_KEY,
   loadState,
-  saveState,
+  updateState,
+  captureRecord,
+  createEditSession,
   searchItems,
   createItem,
   completeItem,
@@ -26,6 +28,7 @@ import {
 import { getItemIcon } from './itemPresentation.js';
 import Editor from './Editor.jsx';
 import Detail from './Detail.jsx';
+import StaleDraft from './StaleDraft.jsx';
 import Activity from './Activity.jsx';
 import Search from './Search.jsx';
 import { formatDateLabel } from './dateLabel.js';
@@ -232,6 +235,7 @@ export default function App() {
   const [filter, setFilter] = useState(0);
   const [mineTab, setMineTab] = useState('published');
   const [toast, setToast] = useState('');
+  const [storageError, setStorageError] = useState(initial.error);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(''), 3400);
@@ -239,13 +243,15 @@ export default function App() {
   }, [toast]);
   useEffect(() => {
     function onStorage(event) {
-      if (event.key !== STORAGE_KEY || !event.newValue) return;
+      if (event.storageArea !== localStorage || (event.key !== STORAGE_KEY && event.key !== null))
+        return;
       try {
-        const latest = JSON.parse(event.newValue);
+        const latest = loadState(localStorage) || createInitialState();
         dataRef.current = latest;
         setData(latest);
-      } catch {
-        // ignore malformed cross-tab payloads
+        setStorageError('');
+      } catch (error) {
+        setStorageError(error.message);
       }
     }
     window.addEventListener('storage', onStorage);
@@ -268,20 +274,26 @@ export default function App() {
     setRoute({ page });
     setModal(null);
   }
-  function commit(next) {
-    if (initial.error)
-      throw new Error('原有本地数据读取失败，已停止覆盖。请换用可用的浏览器存储后重试。');
+  async function commit(mutate, expected = []) {
     try {
-      const saved = saveState(localStorage, next, dataRef.current.revision ?? 0);
+      const saved = await updateState(localStorage, mutate, {
+        expected,
+        initialState: createInitialState(),
+      });
       dataRef.current = saved;
       setData(saved);
+      setStorageError('');
       return saved;
     } catch (error) {
       if (error?.code === 'STATE_CONFLICT') {
-        const latest = loadState(localStorage) || createInitialState();
-        dataRef.current = latest;
-        setData(latest);
-        setToast('数据已在其他页面更新，已载入最新内容，请重新操作。');
+        try {
+          const latest = loadState(localStorage) || createInitialState();
+          dataRef.current = latest;
+          setData(latest);
+        } catch (readError) {
+          setStorageError(readError.message);
+        }
+        setToast('记录已在其他页面更新，本次修改未覆盖原记录。');
       }
       throw error;
     }
@@ -292,90 +304,125 @@ export default function App() {
   function begin(kind) {
     go({ page: 'editor', type: kind === 'lost' ? 'lost' : 'found', relation: kind });
   }
-  function saveDraft(form) {
-    const sourceItemId = route.editId || form.sourceItemId;
-    const existingEditDraft =
-      sourceItemId &&
-      dataRef.current.drafts.find(
-        (record) => record.sourceItemId === sourceItemId && record.ownerId === CURRENT_USER.id,
-      );
-    const draftId = sourceItemId
-      ? form.id && form.id !== sourceItemId
-        ? form.id
-        : existingEditDraft?.id
-      : form.id;
-    const draft = {
-      ...form,
-      id: draftId,
-      sourceItemId,
-      ownerId: CURRENT_USER.id,
-      relation: route.relation || form.relation,
-    };
-    const drafts = upsertDraft(dataRef.current.drafts, draft);
-    commit({ ...dataRef.current, drafts });
-    setToast('草稿已保存，下次可从“我的”继续填写。');
-    return drafts.find((record) => record.id === draft.id) || drafts[0];
+  async function saveDraft(form, session, { asCopy = false } = {}) {
+    const sourceItemId = asCopy ? undefined : session.sourceItemId;
+    let draft;
+    const saved = await commit(
+      (latest) => {
+        if (sourceItemId && isDraftStale({ sourceItemId }, latest.items))
+          throw new Error('原记录已结案或移除，请将当前内容另存为新草稿。');
+        const drafts = upsertDraft(latest.drafts, {
+          ...form,
+          id: asCopy ? undefined : session.draftId,
+          sourceItemId,
+          ownerId: CURRENT_USER.id,
+        });
+        draft = drafts.find((record) => record.id === session.draftId && !asCopy) || drafts[0];
+        return { ...latest, drafts };
+      },
+      asCopy ? [] : session.expected,
+    );
+    setToast(
+      asCopy ? '当前内容已另存为新草稿，原记录保留。' : '草稿已保存，下次可从“我的”继续填写。',
+    );
+    return { draft, session: createEditSession(saved, { draftId: draft.id }) };
   }
-  function publish(form) {
-    const sourceItemId = route.editId || form.sourceItemId;
-    const previous =
-      sourceItemId && dataRef.current.items.find((record) => record.id === sourceItemId);
-    if (
-      sourceItemId &&
-      (!previous || previous.ownerId !== CURRENT_USER.id || previous.status !== 'active')
-    )
-      throw new Error('这条记录现在不能编辑。');
-    const clean = {
-      ...form,
-      ownerName: CURRENT_USER.name,
-      relation: route.relation || form.relation,
-      timeLabel: '',
-      custody:
-        route.relation === 'transfer'
-          ? '来源待核实'
-          : route.relation === 'service'
-            ? '发布者登记已交服务点'
-            : form.type === 'found'
-              ? '本人暂存'
-              : '正在寻找',
-    };
-    delete clean.sourceItemId;
-    const item = createItem(clean, {
-      id: previous?.id,
-      items: dataRef.current.items.filter((record) => record.id !== previous?.id),
-    });
-    if (previous) item.createdAt = previous.createdAt;
-    const items = previous
-      ? dataRef.current.items.map((record) => (record.id === previous.id ? item : record))
-      : [item, ...dataRef.current.items];
-    commit({
-      ...dataRef.current,
-      items,
-      drafts: dataRef.current.drafts.filter(
-        (record) => record.id !== form.id && (!previous || record.sourceItemId !== previous.id),
-      ),
-    });
-    setToast(previous ? '修改已保存' : '发布成功，愿小物早日回家。');
+  async function publish(form, session) {
+    const sourceItemId = session.sourceItemId;
+    let item;
+    await commit((latest) => {
+      const previous = sourceItemId && latest.items.find((record) => record.id === sourceItemId);
+      if (
+        sourceItemId &&
+        (!previous || previous.ownerId !== CURRENT_USER.id || previous.status !== 'active')
+      )
+        throw new Error('这条记录现在不能编辑。');
+      const clean = {
+        ...form,
+        ownerName: CURRENT_USER.name,
+        custody:
+          form.relation === 'transfer'
+            ? '来源待核实'
+            : form.relation === 'service'
+              ? '发布者登记已交服务点'
+              : form.type === 'found'
+                ? '本人暂存'
+                : '正在寻找',
+      };
+      delete clean.sourceItemId;
+      delete clean.timeLabel;
+      item = createItem(clean, {
+        id: previous?.id,
+        items: latest.items.filter((record) => record.id !== previous?.id),
+      });
+      if (previous) item.createdAt = previous.createdAt;
+      return {
+        ...latest,
+        items: previous
+          ? latest.items.map((record) => (record.id === previous.id ? item : record))
+          : [item, ...latest.items],
+        drafts: latest.drafts.filter((record) => record.id !== session.draftId),
+      };
+    }, session.expected);
+    setToast(sourceItemId ? '修改已保存' : '发布成功，愿小物早日回家。');
     setTrail([{ page: 'mine' }]);
     setRoute({ page: 'detail', id: item.id });
   }
-  function complete(id) {
-    commit({ ...dataRef.current, items: completeItem(dataRef.current.items, id, CURRENT_USER.id) });
+  function reloadEditor(session) {
+    const latest = loadState(localStorage) || createInitialState();
+    const source = latest.items.find((record) => record.id === session.sourceItemId);
+    const sourceBaseline = session.expected.find((record) => record.collection === 'items');
+    const sourceChanged =
+      sourceBaseline && JSON.stringify(source) !== JSON.stringify(sourceBaseline.value);
+    const form =
+      sourceChanged || !session.draftId
+        ? source
+        : latest.drafts.find((record) => record.id === session.draftId);
+    if (!form || isDraftStale({ sourceItemId: session.sourceItemId }, latest.items))
+      throw new Error('原记录已结案或移除，无法继续编辑；可以另存当前内容为新草稿。');
+    dataRef.current = latest;
+    setData(latest);
+    return {
+      form,
+      session: createEditSession(latest, {
+        draftId: session.draftId,
+        editId: session.sourceItemId,
+      }),
+    };
+  }
+  async function complete(id, expectedItem = data.items.find((record) => record.id === id)) {
+    await commit(
+      (latest) => ({ ...latest, items: completeItem(latest.items, id, CURRENT_USER.id) }),
+      [{ collection: 'items', id, value: expectedItem || null }],
+    );
     setToast('状态已更新，谢谢你让小物回家。');
   }
-  function discardDraft(id) {
-    const drafts = dataRef.current.drafts.filter((record) => record.id !== id);
-    commit({ ...dataRef.current, drafts });
+  async function discardDraft(id, expectedDraft = data.drafts.find((record) => record.id === id)) {
+    await commit(
+      (latest) => {
+        const draft = latest.drafts.find((record) => record.id === id);
+        if (!draft || draft.ownerId !== CURRENT_USER.id)
+          throw new Error('这份草稿不存在，或不属于当前用户。');
+        if (!isDraftStale(draft, latest.items))
+          throw new Error('这份草稿仍可编辑，请返回草稿箱查看。');
+        return { ...latest, drafts: latest.drafts.filter((record) => record.id !== id) };
+      },
+      [{ collection: 'drafts', id, value: expectedDraft || null }],
+    );
     setToast('已丢弃失效草稿。');
+    go({ page: 'drafts' }, true);
   }
-  function saveActivity(record) {
-    commit({
-      ...dataRef.current,
-      activities: [
-        { ...record, id: crypto.randomUUID?.() || String(Date.now()) },
-        ...(dataRef.current.activities || []),
-      ],
-    });
+  async function saveActivity(record) {
+    await commit(
+      (latest) => ({
+        ...latest,
+        activities: [
+          { ...record, id: crypto.randomUUID?.() || String(Date.now()) },
+          ...(latest.activities || []),
+        ],
+      }),
+      [captureRecord(data, 'items', record.itemId)],
+    );
     setToast('已保存到本机记录，请通过公开联系方式联系对方。');
     go({ page: 'messages' }, true);
   }
@@ -412,9 +459,9 @@ export default function App() {
               ▰ ◔ ▰
             </b>
           </div>
-          {initial.error && (
+          {storageError && (
             <div className="storage-warning" role="alert">
-              {initial.error}
+              {storageError}
             </div>
           )}
           {home && (
@@ -623,14 +670,14 @@ export default function App() {
                         item={draft}
                         subtitle={
                           stale
-                            ? '已失效 · 原记录已结案'
+                            ? '已失效 · 原记录已结案或不存在'
                             : draft.progress ||
                               `${draft.type === 'lost' ? '寻物' : '招领'}草稿 · 尚未发布`
                         }
-                        action={stale ? '丢弃' : '继续填写'}
+                        action={stale ? '查看草稿' : '继续填写'}
                         onClick={
                           stale
-                            ? () => discardDraft(draft.id)
+                            ? () => go({ page: 'stale-draft', draftId: draft.id })
                             : () =>
                                 go({
                                   page: 'editor',
@@ -652,10 +699,20 @@ export default function App() {
               </main>
             </>
           )}
+          {route.page === 'stale-draft' && (
+            <StaleDraft
+              key={route.draftId}
+              draft={data.drafts.find((draft) => draft.id === route.draftId)}
+              currentUser={CURRENT_USER}
+              onBack={() => go({ page: 'drafts' }, true)}
+              onDiscard={discardDraft}
+            />
+          )}
           {route.page === 'editor' && (
             <Editor
               key={route.draftId || route.editId || route.type}
               type={route.type}
+              initialSession={createEditSession(data, route)}
               initialData={
                 data.drafts.find((draft) => draft.id === route.draftId) ||
                 data.items.find((item) => item.id === route.editId) ||
@@ -673,6 +730,7 @@ export default function App() {
               onBack={back}
               onSaveDraft={saveDraft}
               onPublish={publish}
+              onReload={reloadEditor}
             />
           )}
           {route.page === 'detail' && (

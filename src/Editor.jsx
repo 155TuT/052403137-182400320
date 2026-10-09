@@ -68,11 +68,15 @@ function Field({ name, label, error, hint, children }) {
 export default function Editor({
   type = 'found',
   initialData = null,
+  initialSession = { expected: [] },
   onBack,
   onSaveDraft,
   onPublish,
+  onReload,
 }) {
   const [form, setForm] = useState(() => initialForm(type, initialData));
+  const session = useRef(initialSession);
+  const [conflict, setConflict] = useState(false);
   const [step, setStep] = useState('edit');
   const [errors, setErrors] = useState({});
   const [failure, setFailure] = useState('');
@@ -166,15 +170,22 @@ export default function Editor({
     try {
       const snapshot = { ...form, images: form.images.map((image) => ({ ...image })) };
       if (action === 'publish') {
-        await onPublish(snapshot);
+        await onPublish(snapshot, session.current);
         setPublished(true);
         setNotice('信息已发布，可以回到列表查看。');
       } else {
-        const saved = await onSaveDraft(snapshot);
-        if (saved?.id) setForm((current) => ({ ...current, id: saved.id }));
-        setNotice('草稿已保存，下次可以继续填写。');
+        const saved = await onSaveDraft(snapshot, session.current, { asCopy: action === 'copy' });
+        session.current = saved.session;
+        setForm(initialForm(type, saved.draft));
+        setNotice(
+          action === 'copy'
+            ? '已另存为新草稿，原记录和其他页面的修改均保留。'
+            : '草稿已保存，下次可以继续填写。',
+        );
       }
+      setConflict(false);
     } catch (error) {
+      if (error?.code === 'STATE_CONFLICT') setConflict(true);
       const detail = error instanceof Error ? error.message : '';
       if (error?.errors) {
         setErrors(error.errors);
@@ -184,6 +195,27 @@ export default function Editor({
         `${action === 'publish' ? '发布' : '保存'}未完成，填写的内容仍在。${detail || '请重试。'}`,
       );
       scrollArea.current?.scrollTo({ top: 0 });
+    } finally {
+      busy.current = false;
+      setWorking('');
+    }
+  }
+
+  async function reloadLatest() {
+    if (busy.current) return;
+    busy.current = true;
+    setWorking('reload');
+    try {
+      const latest = await onReload(session.current);
+      session.current = latest.session;
+      setForm(initialForm(type, latest.form));
+      setStep('edit');
+      setErrors({});
+      setFailure('');
+      setConflict(false);
+      setNotice('已载入最新内容，可以重新修改。');
+    } catch (error) {
+      setFailure(error.message);
     } finally {
       busy.current = false;
       setWorking('');
@@ -263,6 +295,19 @@ export default function Editor({
           <div className="editor-message editor-message--error" role="alert">
             {failure}
           </div>
+        ) : null}
+        {conflict ? (
+          <InfoCard title="其他页面已修改这条记录">
+            <p>你的填写内容仍在。可以单独保存当前内容，或放弃当前修改并载入最新记录。</p>
+            <div className="editor-conflict-actions">
+              <Button type="button" disabled={locked} onClick={() => persist('copy')}>
+                当前内容另存新草稿
+              </Button>
+              <Button type="button" variant="secondary" disabled={locked} onClick={reloadLatest}>
+                放弃当前修改，载入最新
+              </Button>
+            </div>
+          </InfoCard>
         ) : null}
         {notice ? (
           <div className="editor-message editor-message--success" role="status">

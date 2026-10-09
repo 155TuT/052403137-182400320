@@ -300,3 +300,16 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.editor-conflict-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editor-conflict-actions .button {
+  min-height: 48px;
+  height: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

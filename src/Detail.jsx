@@ -26,6 +26,7 @@ export default function Detail({
   const contactInput = useRef(null);
   const confirmButton = useRef(null);
   const busyRef = useRef(false);
+  const completionSnapshot = useRef(null);
   const dialogId = useId();
   const contactId = useId();
   const userId = typeof currentUser === 'object' ? currentUser?.id : currentUser;
@@ -76,6 +77,7 @@ export default function Detail({
 
   function openConfirmation() {
     if (!own || completed || busyRef.current) return;
+    completionSnapshot.current = structuredClone(item);
     setCompleteError('');
     setConfirmOpen(true);
   }
@@ -92,7 +94,7 @@ export default function Detail({
     setBusy(true);
     setCompleteError('');
     try {
-      const result = await onComplete(item.id);
+      const result = await onComplete(item.id, completionSnapshot.current);
       if (result === false || result?.ok === false)
         throw new Error(result?.error || '状态没有保存，请再试一次。');
       setCompletedId(item.id);

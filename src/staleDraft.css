@@ -1,0 +1,54 @@
+.stale-draft-page .page-title > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.stale-draft-page .page-title > img {
+  flex-shrink: 0;
+}
+
+.stale-draft-fields {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.stale-draft-fields > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.stale-draft-fields dt {
+  color: var(--detail-muted);
+}
+
+.stale-draft-fields dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.stale-draft-photos {
+  display: grid;
+  gap: 12px;
+}
+
+.stale-draft-photos img {
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: var(--detail-bg);
+}
+
+.stale-draft-page .detail-confirm p {
+  overflow-wrap: anywhere;
+}
+
+.stale-draft-page .stale-draft-discard {
+  color: #97432d;
+  background: #fff0ec;
+}

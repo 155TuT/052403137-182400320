@@ -267,6 +267,13 @@ function validateState(state) {
   ) {
     throw new Error('本地数据结构无效，无法读取或保存。');
   }
+  if (state.revision !== undefined && (!Number.isSafeInteger(state.revision) || state.revision < 0))
+    throw new Error('本地数据修订号无效，已停止覆盖。');
+  if (
+    state.activities !== undefined &&
+    (!Array.isArray(state.activities) || state.activities.some((record) => !isObject(record)))
+  )
+    throw new Error('本地认领或协助记录格式无效，已停止覆盖。');
   for (const [label, records] of [
     ['物品', state.items],
     ['草稿', state.drafts],
@@ -328,25 +335,64 @@ export function loadState(storage) {
 }
 
 function readRevision(storage) {
-  if (!storage || typeof storage.getItem !== 'function') return 0;
-  let raw;
-  try {
-    raw = storage.getItem(STORAGE_KEY);
-  } catch {
-    return 0;
-  }
-  if (raw === null) return 0;
-  try {
-    const parsed = JSON.parse(raw);
-    return typeof parsed?.revision === 'number' ? parsed.revision : 0;
-  } catch {
-    return 0;
-  }
+  return loadState(storage)?.revision ?? 0;
+}
+
+function conflictError() {
+  const error = new Error('这条记录已在其他页面修改或移除，本次操作未保存。请查看最新内容后重试。');
+  error.code = 'STATE_CONFLICT';
+  return error;
+}
+
+/** Capture values, not references: receiving a storage event must not rebase an open editor. */
+export function captureRecord(state, collection, id) {
+  return {
+    collection,
+    id,
+    value: copy(state[collection].find((record) => record.id === id) || null),
+  };
+}
+
+export function createEditSession(state, { draftId, editId } = {}) {
+  const draft = state.drafts.find((record) => record.id === draftId);
+  const sourceItemId = editId || draft?.sourceItemId;
+  return {
+    draftId,
+    sourceItemId,
+    expected: [
+      ...(draftId ? [captureRecord(state, 'drafts', draftId)] : []),
+      ...(sourceItemId ? [captureRecord(state, 'items', sourceItemId)] : []),
+    ],
+  };
+}
+
+/** Mutations operate on validated fresh data. Web Locks serialize cooperating tabs. */
+export async function updateState(
+  storage,
+  mutate,
+  { expected = [], initialState, locks = globalThis.navigator?.locks } = {},
+) {
+  const write = () => {
+    const latest = loadState(storage) || copy(initialState);
+    validateState(latest);
+    for (const baseline of expected) {
+      if (!['items', 'drafts'].includes(baseline.collection)) throw new Error('记录基线无效。');
+      const current =
+        latest[baseline.collection].find((record) => record.id === baseline.id) || null;
+      if (JSON.stringify(current) !== JSON.stringify(baseline.value)) throw conflictError();
+    }
+    const next = mutate(latest);
+    if (next?.then) throw new Error('保存操作必须同步生成下一份数据。');
+    return saveState(storage, next, latest.revision ?? 0);
+  };
+  if (locks?.request) return locks.request(`${STORAGE_KEY}:write`, { mode: 'exclusive' }, write);
+  // Older browsers still check record baselines and the storage revision, without an async gap.
+  return write();
 }
 
 export function saveState(storage, state, baseRevision) {
-  if (!storage || typeof storage.setItem !== 'function')
-    throw new Error('浏览器未提供可用的本地存储。');
+  if (!storage || typeof storage.setItem !== 'function' || typeof storage.getItem !== 'function')
+    throw new Error('浏览器未提供可用的本地存储，本次修改尚未持久保存。');
   validateState(state);
   const currentRevision = readRevision(storage);
   if (baseRevision !== undefined && baseRevision !== currentRevision) {
@@ -360,7 +406,7 @@ export function saveState(storage, state, baseRevision) {
   let serialized;
   try {
     serialized = JSON.stringify({
-      ...state,
+      ...migrateState(state),
       revision: currentRevision + 1,
       schemaVersion: SCHEMA_VERSION,
     });
