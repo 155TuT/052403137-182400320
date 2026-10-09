@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" role="img" aria-labelledby="id-card-title id-card-description">
+  <title id="id-card-title">通用证件卡</title>
+  <desc id="id-card-description">淡蓝卡套、荧光绿挂绳扣和暖橙人物剪影，无姓名、编号或其他个人资料。</desc>
+  <g id="campus-id-card" stroke="#252B32" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <path id="lanyard-loop" d="M54 35L45 20Q43 15 49 15H79Q85 15 83 20L74 35" fill="#FFBD73"/>
+    <rect id="card-holder" x="13" y="35" width="102" height="75" rx="12" fill="#D9ECFC"/>
+    <rect id="lanyard-clip" x="53" y="27" width="22" height="22" rx="6" fill="#C7EE38" stroke-width="3.5"/>
+    <path id="clip-slot" d="M60 37H68" stroke-width="3"/>
+    <rect id="portrait-window" x="24" y="57" width="34" height="40" rx="7" fill="#FFFFFF" stroke-width="3"/>
+    <circle id="portrait-head" cx="41" cy="69" r="6" fill="#FFBD73" stroke-width="2.5"/>
+    <path id="portrait-shoulders" d="M29 91C29 76 53 76 53 91Z" fill="#FFBD73" stroke-width="2.5"/>
+    <path id="card-detail-lines" d="M70 67H103M70 79H96M70 91H85" stroke-width="3"/>
+    <path id="card-sparkle" d="M103 15V23M99 19H107" stroke-width="3"/>
+  </g>
+</svg>

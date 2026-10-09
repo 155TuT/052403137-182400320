@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" role="img" aria-labelledby="books-title books-description">
+  <title id="books-title">笔记本与铅笔</title>
+  <desc id="books-description">淡蓝笔记本、荧光绿书脊与暖橙铅笔，表示书本和文具。</desc>
+  <g id="campus-books" stroke="#252B32" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <path id="notebook-pages" d="M29 24H86V110H29Q18 110 18 99V35Q18 24 29 24Z" fill="#FFFFFF"/>
+    <path id="notebook-cover" d="M29 17H82Q88 17 88 23V94H29Q18 94 18 103V28Q18 17 29 17Z" fill="#D9ECFC"/>
+    <path id="lime-spine" d="M29 17H34V94H29Q23 94 18 99V28Q18 17 29 17Z" fill="#C7EE38" stroke-width="3"/>
+    <path id="page-lines" d="M30 102H77" stroke-width="2.5"/>
+    <rect id="notebook-label" x="45" y="35" width="31" height="24" rx="5" fill="#FFFFFF" stroke-width="3"/>
+    <path id="label-lines" d="M52 44H69M52 51H63" stroke-width="2.5"/>
+    <path id="pencil-body" d="M102 27L115 32L90 99L77 94Z" fill="#FFBD73"/>
+    <path id="pencil-eraser" d="M102 27L104 21Q106 16 111 18L115 20Q120 22 118 27L115 32Z" fill="#C7EE38" stroke-width="3"/>
+    <path id="pencil-tip" d="M77 94L77 113L90 99Z" fill="#FFFFFF" stroke-width="3"/>
+    <path id="pencil-lead" d="M77 106V113L82 108" fill="#252B32" stroke-width="2.5"/>
+    <path id="pencil-groove" d="M106 38L87 89" stroke-width="2.5"/>
+  </g>
+</svg>
